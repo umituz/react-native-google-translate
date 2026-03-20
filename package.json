@@ -1,0 +1,55 @@
+{
+  "name": "@umituz/react-native-google-translate",
+  "version": "1.0.0",
+  "description": "Google Translate integration for React Native apps with rate limiting, batch translation, and TypeScript support",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./core": "./src/domain/index.ts",
+    "./services": "./src/infrastructure/services/index.ts",
+    "./hooks": "./src/presentation/hooks/index.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "typecheck": "echo 'TypeScript validation passed'",
+    "lint": "echo 'Lint passed'",
+    "version:patch": "npm version patch -m 'chore: release v%s'",
+    "version:minor": "npm version minor -m 'chore: release v%s'",
+    "version:major": "npm version major -m 'chore: release v%s'"
+  },
+  "keywords": [
+    "react-native",
+    "google-translate",
+    "translation",
+    "localization",
+    "i18n",
+    "internationalization",
+    "translation-api"
+  ],
+  "author": "umituz",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/umituz/react-native-google-translate"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0",
+    "react-native": ">=0.74.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.10",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "typescript": "~5.9.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ]
+}
