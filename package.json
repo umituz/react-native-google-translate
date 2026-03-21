@@ -9,11 +9,18 @@
     ".": "./src/index.ts",
     "./core": "./src/domain/index.ts",
     "./services": "./src/infrastructure/services/index.ts",
+    "./constants": "./src/infrastructure/constants/index.ts",
     "./hooks": "./src/presentation/hooks/index.ts",
-    "./package.json": "./package.json"
+    "./scripts": "./src/scripts/index.ts",
+    "./package.json": "./package.json",
+    "./*": "./src/*/index.ts"
   },
   "scripts": {
-    "typecheck": "echo 'TypeScript validation passed'",
+    "setup": "node src/scripts/setup.ts",
+    "translate": "node src/scripts/translate.ts",
+    "sync": "node src/scripts/sync.ts",
+    "i18n:setup": "node src/scripts/setup.ts",
+    "typecheck": "tsc --noEmit",
     "lint": "echo 'Lint passed'",
     "version:patch": "npm version patch -m 'chore: release v%s'",
     "version:minor": "npm version minor -m 'chore: release v%s'",

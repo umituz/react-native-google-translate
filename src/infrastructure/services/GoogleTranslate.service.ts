@@ -75,9 +75,8 @@ class GoogleTranslateService implements ITranslationService {
       };
     }
 
-    if (this.rateLimiter) {
-      await this.rateLimiter.waitForSlot();
-    }
+    // After ensureInitialized(), rateLimiter is guaranteed to be non-null
+    await this.rateLimiter!.waitForSlot();
 
     try {
       const translatedText = await this.callTranslateAPI(

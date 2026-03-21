@@ -59,7 +59,9 @@ export function useBatchTranslation(
       try {
         const stats = await googleTranslateService.translateBatch(requests);
 
-        setProgress(requests.length);
+        // Progress is completed
+        setProgress(stats.totalCount);
+        options?.onProgress?.(stats.totalCount, stats.totalCount);
 
         if (stats.failureCount > 0) {
           const error = new Error(
