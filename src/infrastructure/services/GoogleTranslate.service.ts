@@ -117,6 +117,8 @@ class GoogleTranslateService implements ITranslationService {
       };
     }
 
+    // Use batch API call for better performance
+    const batchSize = 50;
     const stats: TranslationStats = {
       totalCount: requests.length,
       successCount: 0,
@@ -125,22 +127,52 @@ class GoogleTranslateService implements ITranslationService {
       translatedKeys: [],
     };
 
-    for (const request of requests) {
-      const result = await this.translate(request);
+    for (let i = 0; i < requests.length; i += batchSize) {
+      const batch = requests.slice(i, i + batchSize);
 
-      if (result.success) {
-        if (result.translatedText === result.originalText) {
-          stats.skippedCount++;
-        } else {
-          stats.successCount++;
-          stats.translatedKeys.push({
-            key: request.text,
-            from: result.originalText,
-            to: result.translatedText,
-          });
+      // Wait for rate limiter once per batch instead of once per request
+      await this.rateLimiter!.waitForSlot();
+
+      try {
+        const translations = await this.callTranslateAPIBatch(batch, requests[0].targetLanguage);
+
+        for (let j = 0; j < batch.length; j++) {
+          const request = batch[j];
+          const translatedText = translations[j];
+
+          if (translatedText && translatedText !== request.text) {
+            stats.successCount++;
+            stats.translatedKeys.push({
+              key: request.text,
+              from: request.text,
+              to: translatedText,
+            });
+          } else if (!translatedText) {
+            stats.failureCount++;
+          } else {
+            stats.skippedCount++;
+          }
         }
-      } else {
-        stats.failureCount++;
+      } catch (error) {
+        // Fallback to individual requests on batch failure
+        for (const request of batch) {
+          const result = await this.translate(request);
+
+          if (result.success) {
+            if (result.translatedText === result.originalText) {
+              stats.skippedCount++;
+            } else {
+              stats.successCount++;
+              stats.translatedKeys.push({
+                key: request.text,
+                from: result.originalText,
+                to: result.translatedText,
+              });
+            }
+          } else {
+            stats.failureCount++;
+          }
+        }
       }
     }
 
@@ -174,6 +206,9 @@ class GoogleTranslateService implements ITranslationService {
 
     const keys = Object.keys(sourceObject);
 
+    // Collect all texts to translate first
+    const textsToTranslate: Array<{key: string; enValue: string; currentPath: string}> = [];
+
     for (const key of keys) {
       const enValue = sourceObject[key];
       const targetValue = targetObject[key];
@@ -197,28 +232,43 @@ class GoogleTranslateService implements ITranslationService {
         stats.totalCount++;
 
         if (needsTranslation(targetValue, enValue)) {
-          const request: TranslationRequest = {
-            text: enValue,
+          textsToTranslate.push({key, enValue, currentPath});
+        } else {
+          stats.skippedCount++;
+        }
+      }
+    }
+
+    // Batch translate all texts at once
+    if (textsToTranslate.length > 0) {
+      const batchSize = 50; // Google Translate API can handle ~50 texts at once
+      for (let i = 0; i < textsToTranslate.length; i += batchSize) {
+        const batch = textsToTranslate.slice(i, i + batchSize);
+        const results = await this.translateBatch(
+          batch.map(item => ({
+            text: item.enValue,
             targetLanguage,
-          };
+          }))
+        );
 
-          const result = await this.translate(request);
+        // Apply translations
+        for (let j = 0; j < batch.length; j++) {
+          const {key, enValue, currentPath} = batch[j];
+          const translatedKey = results.translatedKeys[j];
 
-          if (result.success && result.translatedText !== enValue) {
-            targetObject[key] = result.translatedText;
+          if (translatedKey && translatedKey.from !== enValue) {
+            targetObject[key] = translatedKey.to;
             stats.successCount++;
             stats.translatedKeys.push({
               key: currentPath,
               from: enValue,
-              to: result.translatedText,
+              to: translatedKey.to,
             });
-          } else if (!result.success) {
+          } else if (!translatedKey) {
             stats.failureCount++;
           } else {
             stats.skippedCount++;
           }
-        } else {
-          stats.skippedCount++;
         }
       }
     }
@@ -260,6 +310,55 @@ class GoogleTranslateService implements ITranslationService {
       }
 
       return text;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  private async callTranslateAPIBatch(
+    requests: TranslationRequest[],
+    targetLanguage: string,
+    sourceLanguage: string = "en"
+  ): Promise<string[]> {
+    const timeout = this.config?.timeout || DEFAULT_TIMEOUT;
+
+    // Build batch request URL
+    const queryParts = requests.map(req => encodeURIComponent(req.text)).join('&q=');
+    const url = `${GOOGLE_TRANSLATE_API_URL}?client=gtx&sl=${sourceLanguage}&tl=${targetLanguage}&dt=t&q=${queryParts}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Batch API request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Extract translations from batch response
+      const translations: string[] = [];
+
+      if (Array.isArray(data) && data.length > 0) {
+        for (let i = 0; i < requests.length; i++) {
+          if (
+            Array.isArray(data[i]) &&
+            data[i].length > 0 &&
+            Array.isArray(data[i][0]) &&
+            typeof data[i][0][0] === "string"
+          ) {
+            translations.push(data[i][0][0]);
+          } else {
+            translations.push(requests[i].text); // Fallback to original
+          }
+        }
+      }
+
+      return translations;
     } finally {
       clearTimeout(timeoutId);
     }
