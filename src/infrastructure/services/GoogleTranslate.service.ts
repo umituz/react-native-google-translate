@@ -322,9 +322,9 @@ class GoogleTranslateService implements ITranslationService {
   ): Promise<string[]> {
     const timeout = this.config?.timeout || DEFAULT_TIMEOUT;
 
-    // Build batch request URL
-    const queryParts = requests.map(req => encodeURIComponent(req.text)).join('&q=');
-    const url = `${GOOGLE_TRANSLATE_API_URL}?client=gtx&sl=${sourceLanguage}&tl=${targetLanguage}&dt=t&q=${queryParts}`;
+    // Build batch request URL - Google Translate accepts multiple q parameters
+    const queryParams = requests.map(req => `q=${encodeURIComponent(req.text)}`).join('&');
+    const url = `${GOOGLE_TRANSLATE_API_URL}?client=gtx&sl=${sourceLanguage}&tl=${targetLanguage}&dt=t&${queryParams}`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -340,22 +340,29 @@ class GoogleTranslateService implements ITranslationService {
 
       const data = await response.json();
 
-      // Extract translations from batch response
+      // Google Translate batch response format:
+      // [[["translated1", ...]], [["translated2", ...]], ...]
       const translations: string[] = [];
 
-      if (Array.isArray(data) && data.length > 0) {
-        for (let i = 0; i < requests.length; i++) {
+      if (Array.isArray(data)) {
+        for (let i = 0; i < Math.min(requests.length, data.length); i++) {
+          const item = data[i];
           if (
-            Array.isArray(data[i]) &&
-            data[i].length > 0 &&
-            Array.isArray(data[i][0]) &&
-            typeof data[i][0][0] === "string"
+            Array.isArray(item) &&
+            item.length > 0 &&
+            Array.isArray(item[0]) &&
+            typeof item[0][0] === "string"
           ) {
-            translations.push(data[i][0][0]);
+            translations.push(item[0][0]);
           } else {
             translations.push(requests[i].text); // Fallback to original
           }
         }
+      }
+
+      // Fill missing translations with original text
+      while (translations.length < requests.length) {
+        translations.push(requests[translations.length].text);
       }
 
       return translations;
