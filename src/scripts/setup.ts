@@ -90,6 +90,7 @@ export function runSetupLanguages(): void {
   setupLanguages({ targetDir });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Check if this file is being run directly
+if (require.main === module || process.argv[1].endsWith('/setup.js') || process.argv[1].endsWith('\\setup.js')) {
   runSetupLanguages();
 }

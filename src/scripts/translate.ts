@@ -121,6 +121,7 @@ export function runTranslateMissing(): void {
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Check if this file is being run directly
+if (require.main === module || process.argv[1].endsWith('/translate.js') || process.argv[1].endsWith('\\translate.js')) {
   runTranslateMissing();
 }

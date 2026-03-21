@@ -148,6 +148,7 @@ export function runSyncTranslations(): void {
   syncTranslations({ targetDir, srcDir });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Check if this file is being run directly
+if (require.main === module || process.argv[1].endsWith('/sync.js') || process.argv[1].endsWith('\\sync.js')) {
   runSyncTranslations();
 }
