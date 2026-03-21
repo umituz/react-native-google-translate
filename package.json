@@ -1,6 +1,6 @@
 {
   "name": "@umituz/react-native-google-translate",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Google Translate integration for React Native apps with rate limiting, batch translation, and TypeScript support",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
