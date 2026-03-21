@@ -16,10 +16,12 @@
     "./*": "./src/*/index.ts"
   },
   "scripts": {
-    "setup": "node src/scripts/setup.ts",
-    "translate": "node src/scripts/translate.ts",
-    "sync": "node src/scripts/sync.ts",
-    "i18n:setup": "node src/scripts/setup.ts",
+    "build:scripts": "tsc -p tsconfig.scripts.json",
+    "setup": "node dist/scripts/setup.js",
+    "translate": "node dist/scripts/translate.js",
+    "sync": "node dist/scripts/sync.js",
+    "i18n:setup": "node dist/scripts/setup.js",
+    "prepublishOnly": "npm run build:scripts",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'Lint passed'",
     "version:patch": "npm version patch -m 'chore: release v%s'",
@@ -56,6 +58,7 @@
   },
   "files": [
     "src",
+    "dist",
     "README.md",
     "LICENSE"
   ]

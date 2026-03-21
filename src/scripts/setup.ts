@@ -51,8 +51,8 @@ export function setupLanguages(options: SetupLanguagesOptions): boolean {
     .filter(f => f.match(/^[a-z]{2}-[A-Z]{2}\.ts$/))
     .sort();
 
-  const imports = [];
-  const exports = [];
+  const imports: string[] = [];
+  const exports: string[] = [];
 
   files.forEach(file => {
     const code = file.replace('.ts', '');
